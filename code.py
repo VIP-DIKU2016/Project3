@@ -5,10 +5,7 @@ import argparse as ap
 import cv2
 import numpy as np
 import os
-from sklearn.svm import LinearSVC
-from sklearn.externals import joblib
 from scipy.cluster.vq import *
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 
@@ -47,12 +44,13 @@ def main():
     # List where all the descriptors are stored
     descriptors = np.array([])
     sift = cv2.xfeatures2d.SIFT_create()
-
+    des_list = [];
     for p in imagePaths:
         img = cv2.imread(p)
         gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         kp, des = sift.detectAndCompute(gray,None)
         descriptors = np.append(descriptors, des) # Creates a list with image path and its descriptors
+        des_list.append((p, des));
 
     # Reshape for K-means to work
     desc = np.reshape(descriptors, (len(descriptors)/128, 128))
@@ -63,10 +61,22 @@ def main():
     ##################################################################
 
     # Run K-means with k
-    k = 350
-    codebook, distortion = kmeans(desc, k)
+    k = 350;
+    codebook, distortion = kmeans(desc, k);
 
     print codebook.shape;
+
+    ##################################################################
+    ### 4. Making the histogram ######################################
+    ##################################################################
+
+    features = np.zeros((len(imagePaths), k));
+    for i in xrange(len(imagePaths)):
+        words, distance = vq(des_list[i][1],codebook)
+        for w in words:
+            print w;
+            features[i][w] += 1
+
 
     ##################################################################
     ### Indexing #####################################################
