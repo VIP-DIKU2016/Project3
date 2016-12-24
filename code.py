@@ -8,21 +8,37 @@ import os
 from scipy.cluster.vq import *
 import matplotlib.pyplot as plt
 
+def extractSIFT(imagePaths):
+    # List where all the descriptors are stored
+    descriptors = np.array([])
+    sift = cv2.xfeatures2d.SIFT_create()
+    desList = [];
+    for p in imagePaths:
+        img = cv2.imread(p)
+        gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        kp, des = sift.detectAndCompute(gray,None)
+        descriptors = np.append(descriptors, des) # Creates a list with image path and its descriptors
+        desList.append((p, des));
+
+    # Reshape for K-means to work
+    desc = np.reshape(descriptors, (len(descriptors)/128, 128))
+    desc = np.float32(desc)
+    return desc, desList;
 
 def main():
     # Get the path of the training set
     parser = ap.ArgumentParser()
     parser.add_argument("-train", "--training-set", help="rovide a path to the training set", required="True")
-    # parser.add_argument("-test", "--test-set", help="Provide a path to the test set", required="False")
+    parser.add_argument("-test", "--test-set", help="Provide a path to the test set", required="False")
     args = vars(parser.parse_args())
 
     # Get the training classes names and store them in a list
     training_set = args["training_set"]
-    # test_path = args["test-set"]
+    test_set = args["test_set"]
 
-    ##################################################################
-    ### 1. Preparing a list of training paths ########################
-    ##################################################################
+    #
+    # 1. Preparing a list of training/testing paths 
+    #
 
     words = os.listdir(training_set)
 
@@ -37,51 +53,64 @@ def main():
                 if not name.startswith('.'):
                     imagePaths.append(os.path.join(path, name))
 
-    ##################################################################
-    ### 2. Extract SIFT Descriptors ##################################
-    ##################################################################
+    testWords = os.listdir(test_set)
 
-    # List where all the descriptors are stored
-    descriptors = np.array([])
-    sift = cv2.xfeatures2d.SIFT_create()
-    des_list = [];
-    for p in imagePaths:
-        img = cv2.imread(p)
-        gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        kp, des = sift.detectAndCompute(gray,None)
-        descriptors = np.append(descriptors, des) # Creates a list with image path and its descriptors
-        des_list.append((p, des));
+    testImagePaths = [];
+    for w in testWords:
+        wdir = os.path.join(test_set, w)
+        for path, subdirs, files in os.walk(wdir):
+            for name in files:
+                if not name.startswith('.'):
+                    testImagePaths.append(os.path.join(path, name))   
 
-    # Reshape for K-means to work
-    desc = np.reshape(descriptors, (len(descriptors)/128, 128))
-    desc = np.float32(desc)
 
-    ##################################################################
-    ### 3. Perform k-means clustering ################################
-    ##################################################################
+    #
+    # 2. Extract SIFT Descriptors
+    #
+    desc, desList = extractSIFT(imagePaths);
 
-    # Run K-means with k
+    #
+    # 3. Perform k-means clustering
+    #
+
     k = 350;
     codebook, distortion = kmeans(desc, k);
 
     print codebook.shape;
+    
+    #
+    # 4. Making the bag of words
+    #
 
-    ##################################################################
-    ### 4. Making the histogram ######################################
-    ##################################################################
-
-    features = np.zeros((len(imagePaths), k));
+    trainBagOfWords = np.zeros((len(imagePaths), k));
     for i in xrange(len(imagePaths)):
-        words, distance = vq(des_list[i][1],codebook)
+        words, distance = vq(desList[i][1],codebook)
         for w in words:
-            print w;
-            features[i][w] += 1
+            trainBagOfWords[i][w] += 1
 
 
     ##################################################################
     ### Indexing #####################################################
     ##################################################################
 
+    #
+    # 1. Extract SIFT
+    # 
+
+    testDesc, testDesList = extractSIFT(testImagePaths)
+
+    #
+    # 2. Making the bag of words
+    # 
+
+    testBagOfWords = np.zeros((len(testImagePaths), k));
+    for i in xrange(len(testImagePaths)):
+        words, distance = vq(testDesList[i][1],codebook)
+        for w in words:
+            testBagOfWords[i][w] += 1
+
+    print testBagOfWords;
+    
     ##################################################################
     ### Retrieval ####################################################
     ##################################################################
