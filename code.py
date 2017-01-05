@@ -25,6 +25,38 @@ def extractSIFT(imagePaths):
     desc = np.float32(desc)
     return desc, desList;
 
+def common_words(row1, row2):
+    score = 0
+
+    for i in xrange(len(row1[3])):
+        score += min(row1[3][i], row2[3][i])
+    
+    return score
+
+def retrieve(row, table, similarity_measure = common_words):
+    similarity = np.zeros(len(table))
+    classes = { }
+
+    for i in xrange(len(table)):
+        similarity[i] = similarity_measure(row, table[i])
+        
+        if (table[i][2] not in classes):
+            classes[table[i][2]] = 0
+        
+        classes[table[i][2]] += similarity[i]
+
+        # print('Similarity between ' + row[0] + ' and ' + table[i][0] + ' = ' + str(similarity[i]))
+    
+    classes = sorted(classes.items(), key=lambda x:x[1], reverse=True)
+    correct_class_index = [x for x, y in enumerate(classes) if y[0] == row[2]][0]
+
+    reciprocal_rank = 1.0 / (correct_class_index + 1)
+    top3 = correct_class_index <= 2
+
+    # print(row[0] + ' ' + str(classes) + ' ' + str(correct_class_index) + ' ' + str(reciprocal_rank) + ' ' + str(top3))
+
+    return (reciprocal_rank, top3)
+
 def main():
     # Get the path of the training set
     parser = ap.ArgumentParser()
@@ -136,4 +168,21 @@ def main():
     ##################################################################
     ### Retrieval ####################################################
     ##################################################################
+
+    mean_reciprocal_rank = 0.0
+    correct_top_3 = 0.0
+
+    for i in xrange(len(testImagePaths)):
+        classification = retrieve([x for x in table if x[0] == testImagePaths[i]][0], [x for x in table if x[1] == 'train'])
+
+        mean_reciprocal_rank += classification[0]
+        correct_top_3 += 1 if classification[1] else 0
+
+    mean_reciprocal_rank /= len(testImagePaths)
+    correct_top_3 /= len(testImagePaths)
+
+    print('Classify test images')
+    print('  Mean reciprocal rank: ' + str(mean_reciprocal_rank))
+    print('  Correct top 3: ' + str(100 * correct_top_3) + '%')
+    
 main()
