@@ -110,6 +110,28 @@ def main():
             testBagOfWords[i][w] += 1
 
     print testBagOfWords;
+
+    table = []
+
+    for i in xrange(len(imagePaths)):
+        paths = imagePaths[i].split('/')
+
+        table.append([
+            imagePaths[i],
+            paths[1], # 'train'
+            paths[2], # true class
+            trainBagOfWords[i]
+        ])
+    
+    for i in xrange(len(testImagePaths)):
+        paths = testImagePaths[i].split('/')
+
+        table.append([
+            testImagePaths[i],
+            paths[1], # 'test'
+            paths[2], # true class
+            testBagOfWords[i]
+        ])
     
     ##################################################################
     ### Retrieval ####################################################
