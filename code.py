@@ -183,7 +183,12 @@ def main():
     correct_top_3 = 0.0
 
     for i in xrange(len(imagePaths)):
-        classification = retrieve([x for x in table if x[0] == imagePaths[i]][0], [x for x in table if x[1] == 'train'])
+        imageRow = [x for x in table if x[0] == imagePaths[i]][0]
+
+        # All the training images except for the one we are using as query input
+        queryTable = [x for x in table if x[1] == 'train' and x[0] != imagePaths[i]]
+
+        classification = retrieve(imageRow, queryTable)
 
         mean_reciprocal_rank += classification[0]
         correct_top_3 += 1 if classification[1] else 0
@@ -203,7 +208,12 @@ def main():
     correct_top_3 = 0.0
 
     for i in xrange(len(testImagePaths)):
-        classification = retrieve([x for x in table if x[0] == testImagePaths[i]][0], [x for x in table if x[1] == 'train'])
+        imageRow = [x for x in table if x[0] == testImagePaths[i]][0]
+
+        # All the training images
+        queryTable = [x for x in table if x[1] == 'train']
+
+        classification = retrieve(imageRow, queryTable)
 
         mean_reciprocal_rank += classification[0]
         correct_top_3 += 1 if classification[1] else 0
