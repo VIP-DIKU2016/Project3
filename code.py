@@ -35,20 +35,24 @@ def common_words(row1, row2):
 
 def retrieve(row, table, similarity_measure = common_words):
     similarity = np.zeros(len(table))
-    classes = { }
+    # classes = { }
 
     for i in xrange(len(table)):
         similarity[i] = similarity_measure(row, table[i])
         
-        if (table[i][2] not in classes):
-            classes[table[i][2]] = 0
+        # if (table[i][2] not in classes):
+            # classes[table[i][2]] = 0
         
-        classes[table[i][2]] += similarity[i]
+        table[i][4] = similarity[i]
+        # classes[table[i][2]] += similarity[i]
 
         # print('Similarity between ' + row[0] + ' and ' + table[i][0] + ' = ' + str(similarity[i]))
     
-    classes = sorted(classes.items(), key=lambda x:x[1], reverse=True)
-    correct_class_index = [x for x, y in enumerate(classes) if y[0] == row[2]][0]
+    # classes = sorted(classes.items(), key=lambda x:x[1], reverse=True)
+    sorted_table = sorted(table, key=lambda x:x[4], reverse=True)
+
+    # correct_class_index = [x for x, y in enumerate(classes) if y[0] == row[2]][0]
+    correct_class_index = [x for x, y in enumerate(sorted_table) if y[2] == row[2]][0]
 
     reciprocal_rank = 1.0 / (correct_class_index + 1)
     top3 = correct_class_index <= 2
@@ -152,7 +156,8 @@ def main():
             imagePaths[i],
             paths[1], # 'train'
             paths[2], # true class
-            trainBagOfWords[i]
+            trainBagOfWords[i],
+            -1 # dummy classification score
         ])
     
     for i in xrange(len(testImagePaths)):
@@ -162,12 +167,37 @@ def main():
             testImagePaths[i],
             paths[1], # 'test'
             paths[2], # true class
-            testBagOfWords[i]
+            testBagOfWords[i],
+            -1 # dummy classification score
         ])
     
     ##################################################################
     ### Retrieval ####################################################
     ##################################################################
+
+    #
+    # 1. Retrieving training images
+    #
+
+    mean_reciprocal_rank = 0.0
+    correct_top_3 = 0.0
+
+    for i in xrange(len(imagePaths)):
+        classification = retrieve([x for x in table if x[0] == imagePaths[i]][0], [x for x in table if x[1] == 'train'])
+
+        mean_reciprocal_rank += classification[0]
+        correct_top_3 += 1 if classification[1] else 0
+
+    mean_reciprocal_rank /= len(imagePaths)
+    correct_top_3 /= len(imagePaths)
+
+    print('Retrieving training images')
+    print('  Mean reciprocal rank: ' + str(mean_reciprocal_rank))
+    print('  Correct top 3: ' + str(100 * correct_top_3) + '%')
+
+    #
+    # 2. Classify test images
+    #
 
     mean_reciprocal_rank = 0.0
     correct_top_3 = 0.0
