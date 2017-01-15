@@ -26,6 +26,7 @@ def extractSIFT(imagePaths):
     return desc, desList;
 
 def common_words(row1, row2):
+    '''Counts the number of common words between two table rows'''
     score = 0
 
     for i in xrange(len(row1[3])):
@@ -34,30 +35,24 @@ def common_words(row1, row2):
     return score
 
 def retrieve(row, table, similarity_measure = common_words):
+    '''Given a row, a table (which must not include the row) and a similarity measure,
+    computes the similarity score between the row and all the rows in the table.
+    Returns a tuple formed by the reciprocal rank and if the correct class
+    was in the top 3 results.'''
+
     similarity = np.zeros(len(table))
-    # classes = { }
 
     for i in xrange(len(table)):
         similarity[i] = similarity_measure(row, table[i])
         
-        # if (table[i][2] not in classes):
-            # classes[table[i][2]] = 0
-        
         table[i][4] = similarity[i]
-        # classes[table[i][2]] += similarity[i]
-
-        # print('Similarity between ' + row[0] + ' and ' + table[i][0] + ' = ' + str(similarity[i]))
-    
-    # classes = sorted(classes.items(), key=lambda x:x[1], reverse=True)
+        
     sorted_table = sorted(table, key=lambda x:x[4], reverse=True)
 
-    # correct_class_index = [x for x, y in enumerate(classes) if y[0] == row[2]][0]
     correct_class_index = [x for x, y in enumerate(sorted_table) if y[2] == row[2]][0]
 
     reciprocal_rank = 1.0 / (correct_class_index + 1)
     top3 = correct_class_index <= 2
-
-    # print(row[0] + ' ' + str(classes) + ' ' + str(correct_class_index) + ' ' + str(reciprocal_rank) + ' ' + str(top3))
 
     return (reciprocal_rank, top3)
 
@@ -145,10 +140,11 @@ def main():
         for w in words:
             testBagOfWords[i][w] += 1
 
-    print testBagOfWords;
-
     table = []
 
+    #
+    # 3. Construct the table
+    #
     for i in xrange(len(imagePaths)):
         paths = imagePaths[i].split('/')
 
